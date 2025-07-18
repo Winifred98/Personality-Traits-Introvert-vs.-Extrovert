@@ -1,0 +1,122 @@
+---
+title: "DA 1 Project"
+author: "David"
+date: "2025-07-10"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Set working directory and loading the data
+```{r Load Data, echo=TRUE}
+#setwd("C:/Users/dell/Desktop/DA1 ASSIGNMENT/DA1 Project")
+hcd <- read.csv("human_cognitive_performance.csv", stringsAsFactors = T)
+```
+
+Checking the structure of the data
+```{r Data info, echo=TRUE}
+str(hcd)
+```
+
+Checking missing values and duplicates
+```{r Missing value, echo=TRUE}
+any(is.na(hcd)) #Checking for missing values generally
+sapply(hcd, function(x) sum(is.na(x))) #Checking for missing values column by column
+
+anyDuplicated(hcd) #Checking for duplicate
+
+```
+
+Summarizing non numeric columns
+```{r summary non-numeric, echo=TRUE}
+hcd<- hcd[-1]
+non_numeric <- hcd[sapply(hcd, is.factor)]
+lapply(non_numeric, function(x) table(x))
+```
+
+Summarizing numeric columns
+```{r summary non-numeric, echo=TRUE}
+numeric <- hcd[sapply(hcd, is.numeric)]
+lapply(numeric, function(x) summary(x))
+```
+
+Vituals of non numeric columns
+```{r Vitualize non-numeric Bar, echo=TRUE}
+non_numeric <- hcd[sapply(hcd, is.factor)]
+for(col in names(non_numeric)){
+  barplot(table(hcd[col]), col = c("blue","purple","green"), xlab = col, ylab = "Frequency", main = paste("Bar Chart Plot of ", col))
+}
+```
+
+```{r Vitualize non-numeric Pie, echo=TRUE}
+non_numeric <- hcd[sapply(hcd, is.factor)]
+for(col in names(non_numeric)){
+  pie(table(hcd[col]), col = c("black","red","green"),  main = paste("Pie Chart Plot of ", col))
+}
+```
+
+Boxplot and Histogram of numeric Variables
+```{r Box, echo=TRUE}
+for(col in names(numeric)){
+  boxplot(hcd[col], col="yellow", main = paste("Box plot of ", col))
+}
+```
+
+```{r hist, echo=TRUE}
+for(col in names(numeric)){
+  hist(hcd[[col]], col="brown", main = paste("Distribution of ", col))
+}
+```
+
+Correlations of Numeric variables
+```{r Correlation, echo=TRUE}
+cols <- names(numeric)
+cor(hcd[cols])
+```
+
+Scatter plot of Score against Other numeric
+```{r Scatter Plot, echo=TRUE}
+for(col in names(numeric[-8])){
+  plot(hcd[[col]], hcd$Cognitive_Score, xlab = col, ylab = "Cognitive Score", main = paste("Scatter plot of Cognitive Score against", col))
+}
+```
+
+Divide the data into Train and test using 80 to 20 percent
+```{r Divide Data, echo=TRUE}
+set.seed(123)
+train_sample <- sample(nrow(hcd), 80/100*nrow(hcd))
+train_data <- hcd[train_sample,]
+test_data <- hcd[-train_sample,]
+str(train_data)
+```
+
+Fitting Regression Model
+```{r Regression Model, echo=TRUE}
+reg_model <- lm(Cognitive_Score~., data = train_data)
+summary(reg_model)
+Predicted_ScoreR <- predict(reg_model, test_data)
+Predicted_ScoreR <- ifelse(Predicted_ScoreR < 0, 0, ifelse(Predicted_ScoreR > 100, 100, Predicted_ScoreR))
+test_data$Predicted_Score_Reg <-  round(Predicted_ScoreR,2)
+library(Metrics)
+reg_rmse <- rmse(test_data$Cognitive_Score,test_data$Predicted_Score_Reg)
+reg_rmse
+```
+
+```{r Rpart Model, echo=TRUE}
+library(rpart)
+rpart_model <- rpart(Cognitive_Score~., data = train_data)
+summary(rpart_model)
+Predicted_Score_rpart <- predict(rpart_model, test_data)
+Predicted_Score_rpart <- ifelse(Predicted_Score_rpart < 0, 0, ifelse(Predicted_Score_rpart > 100, 100, Predicted_Score_rpart))
+test_data$Predicted_Score_Rpart <-  round(Predicted_Score_rpart,2)
+library(Metrics)
+rpart_rmse <- rmse(test_data$Cognitive_Score,test_data$Predicted_Score_Rpart)
+rpart_rmse
+```
+
+```{r best model, echo=TRUE}
+if(reg_rmse < rpart_rmse) cat("The best model is Linear Regression with rmse of", reg_rmse) else cat("The best model is Regression Tree with rmse of", rpart_rmse)
+```
+
